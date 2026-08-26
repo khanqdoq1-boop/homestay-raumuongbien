@@ -30,7 +30,7 @@ let selectedForBook = [];
 let selectedForDelete = []; 
 
 // ==========================================
-// 3. ĐỒNG BỘ DỮ LIỆU TỪ MẠNG (THAY THẾ LOCALSTORAGE)
+// 3. ĐỒNG BỘ DỮ LIỆU & TỰ ĐỘNG DỌN LỊCH CŨ 1 NĂM
 // ==========================================
 database.ref('homestayDB_V4').on('value', (snapshot) => {
     const data = snapshot.val();
@@ -42,9 +42,36 @@ database.ref('homestayDB_V4').on('value', (snapshot) => {
         saveData();
     }
     
-    // Đảm bảo mảng bookings luôn tồn tại (tránh lỗi khi Firebase tự xóa mảng rỗng)
+    let hasDeletedOldData = false;
+    
+    // Lấy ngày hôm nay và lùi lại đúng 1 năm
+    let today = new Date();
+    today.setFullYear(today.getFullYear() - 1);
+    let cutoffDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    // Đảm bảo mảng bookings luôn tồn tại và tiến hành lọc bỏ lịch cũ
     for(let user in db) {
         if(!db[user].bookings) db[user].bookings = [];
+        
+        let originalLength = db[user].bookings.length;
+        
+        // Quét và xóa các lịch cũ
+        db[user].bookings = db[user].bookings.filter(b => {
+            // Lấy ngày trả phòng cuối cùng trong chuỗi ngày khách đặt
+            let maxDate = b.dates.reduce((max, d) => d > max ? d : max, "0000-00-00");
+            // Chỉ giữ lại lịch nếu ngày trả phòng lớn hơn hoặc bằng mốc 1 năm trước
+            return maxDate >= cutoffDate; 
+        });
+        
+        // Đánh dấu nếu có dữ liệu cũ vừa bị xóa khỏi mảng
+        if(db[user].bookings.length !== originalLength) {
+            hasDeletedOldData = true;
+        }
+    }
+    
+    // Nếu có dọn dẹp lịch cũ, đẩy dữ liệu mới (đã sạch) lên lại Firebase
+    if(hasDeletedOldData) {
+        saveData();
     }
     
     // Cập nhật lại giao diện ngay khi có dữ liệu mới từ người khác (hoặc tải trang)
