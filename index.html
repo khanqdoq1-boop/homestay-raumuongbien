@@ -19,56 +19,76 @@
         </div>
     </div>
 
-    <div class="main-container">
-        <!-- Tabs phòng -->
-        <div class="room-tabs">
-            <button class="tab active" onclick="switchRoom('don1')" id="tab-don1">Phòng Đơn</button>
-            <button class="tab" onclick="switchRoom('doi1')" id="tab-doi1">Phòng Đôi 1</button>
-            <button class="tab" onclick="switchRoom('doi2')" id="tab-doi2">Phòng Đôi 2</button>
+    <!-- Cấu trúc có cột trái -->
+    <div class="layout-wrapper">
+        <!-- CỘT TRÁI: Danh sách lịch -->
+        <div class="sidebar" id="sidebar-container" style="display: none;">
+            <h3>Lịch Đã Đặt</h3>
+            <div id="booking-list-sidebar"></div>
         </div>
 
-        <!-- Khung Lịch -->
-        <div class="calendar-container">
-            <div class="calendar-header">
-                <button class="btn-nav" onclick="changeMonth(-1)">&#10094; Trước</button>
-                <div class="month-year-picker">
-                    <select id="month-select" onchange="renderCalendar()">
-                        <option value="0">Tháng 1</option><option value="1">Tháng 2</option>
-                        <option value="2">Tháng 3</option><option value="3">Tháng 4</option>
-                        <option value="4">Tháng 5</option><option value="5">Tháng 6</option>
-                        <option value="6">Tháng 7</option><option value="7" selected>Tháng 8</option>
-                        <option value="8">Tháng 9</option><option value="9">Tháng 10</option>
-                        <option value="10">Tháng 11</option><option value="11">Tháng 12</option>
-                    </select>
-                    <input type="number" id="year-input" value="2026" onchange="renderCalendar()">
+        <!-- CỘT PHẢI: Khung chính -->
+        <div class="main-container">
+            
+            <!-- Quản lý Phòng (Tabs & Nút) -->
+            <div class="room-management">
+                <div class="room-tabs" id="dynamic-room-tabs">
+                    <!-- Danh sách phòng sẽ được Javascript vẽ vào đây -->
+                    <button class="tab active">Phòng Đơn</button>
+                    <button class="tab">Phòng Đôi 1</button>
+                    <button class="tab">Phòng Đôi 2</button>
                 </div>
-                <button class="btn-nav" onclick="changeMonth(1)">Sau &#10095;</button>
+                
+                <div id="room-actions-container" class="room-actions" style="display: none;">
+                    <button class="btn-black btn-small" onclick="promptAddRoom()">+ Thêm Phòng</button>
+                    <button class="btn-danger btn-small" onclick="deleteCurrentRoom()">- Xóa Phòng Này</button>
+                </div>
             </div>
 
-            <div class="weekdays">
-                <div>CN</div><div>T2</div><div>T3</div><div>T4</div><div>T5</div><div>T6</div><div>T7</div>
+            <!-- Khung Lịch -->
+            <div class="calendar-container">
+                <div class="calendar-header">
+                    <button class="btn-nav" onclick="changeMonth(-1)">&#10094; Trước</button>
+                    <div class="month-year-picker">
+                        <select id="month-select" onchange="renderCalendar()">
+                            <option value="0">Tháng 1</option><option value="1">Tháng 2</option>
+                            <option value="2">Tháng 3</option><option value="3">Tháng 4</option>
+                            <option value="4">Tháng 5</option><option value="5">Tháng 6</option>
+                            <option value="6">Tháng 7</option><option value="7" selected>Tháng 8</option>
+                            <option value="8">Tháng 9</option><option value="9">Tháng 10</option>
+                            <option value="10">Tháng 11</option><option value="11">Tháng 12</option>
+                        </select>
+                        <input type="number" id="year-input" value="2026" onchange="renderCalendar()">
+                    </div>
+                    <button class="btn-nav" onclick="changeMonth(1)">Sau &#10095;</button>
+                </div>
+
+                <div class="weekdays">
+                    <div>CN</div><div>T2</div><div>T3</div><div>T4</div><div>T5</div><div>T6</div><div>T7</div>
+                </div>
+
+                <!-- Lưới ngày -->
+                <div class="days-grid" id="days-grid"></div>
+
+                <div class="legend">
+                    <div class="legend-item"><span class="box box-empty"></span> Trống</div>
+                    <div class="legend-item"><span class="box box-selected-book"></span> Đang chọn</div>
+                    <div class="legend-item"><span class="box box-booked"></span> Đã đặt</div>
+                </div>
             </div>
 
-            <!-- Lưới ngày -->
-            <div class="days-grid" id="days-grid"></div>
-
-            <div class="legend">
-                <div class="legend-item"><span class="box box-empty"></span> Trống</div>
-                <div class="legend-item"><span class="box box-selected-book"></span> Đang chọn</div>
-                <div class="legend-item"><span class="box box-booked"></span> Đã đặt</div>
-            </div>
-        </div>
-
-        <!-- Vùng Nút bấm (Hiện khi đã chọn ngày) -->
-        <div id="admin-controls" class="admin-panel" style="display: none;">
-            <p style="text-align: left; font-size: 14px;">
-                <b>Thao tác nhanh:</b><br>
-                - <b>Đặt phòng:</b> Bấm vào các ô trống để chọn ngày khách ở (có thể chọn nhiều). Sau đó bấm "Lưu Lịch Đặt Phòng".<br>
-                - <b>Xóa lịch:</b> Bấm vào các ô màu đen. Sau đó bấm "Xóa Lịch Đã Chọn".
-            </p>
-            <div class="action-buttons">
-                <button id="btn-book-action" class="btn-black btn-action" style="display: none;" onclick="openBookModal()">Lưu Lịch Đặt Phòng</button>
-                <button id="btn-delete-action" class="btn-danger btn-action" style="display: none;" onclick="deleteSelected()">Xóa Lịch Đã Chọn</button>
+            <!-- Vùng Nút bấm -->
+            <div id="admin-controls" class="admin-panel" style="display: none;">
+                <p style="text-align: left; font-size: 14px;">
+                    <b>Thao tác nhanh:</b><br>
+                    - <b>Đặt phòng:</b> Bấm vào các ô trống. Bấm "Lưu Lịch".<br>
+                    - <b>Xóa lịch:</b> Bấm vào các ô màu đen. Bấm "Xóa Lịch".<br>
+                    - <b>Quản lý phòng:</b> Dùng nút Thêm/Xóa phòng ở góc trên.
+                </p>
+                <div class="action-buttons">
+                    <button id="btn-book-action" class="btn-black btn-action" style="display: none;" onclick="openBookModal()">Lưu Lịch Đặt Phòng</button>
+                    <button id="btn-delete-action" class="btn-danger btn-action" style="display: none;" onclick="deleteSelected()">Xóa Lịch Đã Chọn</button>
+                </div>
             </div>
         </div>
     </div>
@@ -94,19 +114,16 @@
         <div id="account-list" style="text-align: left; max-height: 200px; overflow-y: auto;"></div>
     </div>
 
-    <!-- Modal: Nhập thông tin Đặt Phòng -->
     <div id="modal-book" class="modal">
         <h3>Thông Tin Đặt Phòng</h3>
         <p style="text-align:left; font-size: 14px;">Các ngày đã chọn (Năm-Tháng-Ngày): <br><b id="book-dates-lbl" style="color: #555;"></b></p>
-        
         <label>Tên khách hàng:</label>
         <input type="text" id="book-name" placeholder="Ví dụ: Nguyễn Văn A">
-        
         <label>Tổng giá tiền (VNĐ):</label>
         <input type="number" id="book-price" placeholder="Ví dụ: 500000">
-        
         <button class="btn-black" onclick="submitBooking()" style="margin-top: 15px;">Xác Nhận Đặt</button>
     </div>
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="script.js"></script>
