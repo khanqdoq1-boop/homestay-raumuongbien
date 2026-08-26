@@ -21,7 +21,6 @@ let authMode = 'login';
 let selectedForBook = [];   
 let selectedForDelete = []; 
 
-// Khởi tạo phòng mặc định nếu tài khoản chưa có danh sách phòng
 const defaultRooms = [
     { id: 'don1', name: 'Phòng Đơn' },
     { id: 'doi1', name: 'Phòng Đôi 1' },
@@ -33,7 +32,7 @@ database.ref('homestayDB_V4').on('value', (snapshot) => {
     if (data) {
         db = data;
     } else {
-        db['admin'] = { password: 'admin', bookings: [], rooms: [...defaultRooms] };
+        db['admin'] = { password: 'admin', businessName: 'HOMESTAY RAU MUỐNG BIỂN - NINH HÒA', bookings: [], rooms: [...defaultRooms] };
         saveData();
     }
     
@@ -48,10 +47,9 @@ database.ref('homestayDB_V4').on('value', (snapshot) => {
 
     for(let user in db) {
         if(!db[user].bookings) db[user].bookings = [];
-        // Cập nhật cấu trúc: Bổ sung danh sách phòng cho tài khoản cũ
         if(!db[user].rooms || db[user].rooms.length === 0) {
             db[user].rooms = [...defaultRooms];
-            hasDeletedOldData = true; // Kích hoạt lưu lại
+            hasDeletedOldData = true; 
         }
         
         let originalLength = db[user].bookings.length;
@@ -65,12 +63,16 @@ database.ref('homestayDB_V4').on('value', (snapshot) => {
     
     if(hasDeletedOldData) saveData();
     
-    // Đảm bảo currentRoom tồn tại (nếu vừa bị thiết bị khác xóa)
     if (currentUser && db[currentUser]) {
         let roomExists = db[currentUser].rooms.find(r => r.id === currentRoom);
         if (!roomExists && db[currentUser].rooms.length > 0) {
             currentRoom = db[currentUser].rooms[0].id;
         }
+        
+        let bName = db[currentUser].businessName || 'HỆ THỐNG QUẢN LÝ';
+        document.getElementById('brand-name').innerText = bName.toUpperCase();
+    } else {
+        document.getElementById('brand-name').innerText = 'HỆ THỐNG QUẢN LÝ';
     }
     
     renderRooms();
@@ -92,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('nav-login').style.display = 'none';
         document.getElementById('nav-logout').style.display = 'inline';
         document.getElementById('nav-revenue').style.display = 'inline';
-        document.getElementById('nav-changepass').style.display = 'inline';
+        document.getElementById('nav-edit-account').style.display = 'inline'; // Hiển thị nút Tài khoản
         document.getElementById('admin-controls').style.display = 'block';
         
         if (currentUser === 'admin') document.getElementById('nav-admin').style.display = 'inline';
@@ -105,7 +107,6 @@ function renderRooms() {
     const roomActions = document.getElementById('room-actions-container');
     
     if (!currentUser || !db[currentUser]) {
-        // Giao diện mặc định khi chưa đăng nhập
         tabsContainer.innerHTML = `
             <button class="tab active">Phòng Đơn</button>
             <button class="tab">Phòng Đôi 1</button>
@@ -118,7 +119,6 @@ function renderRooms() {
     if (roomActions) roomActions.style.display = 'flex';
     tabsContainer.innerHTML = '';
     
-    // Vẽ danh sách phòng của riêng tài khoản đó
     db[currentUser].rooms.forEach(room => {
         const btn = document.createElement('button');
         btn.className = `tab ${room.id === currentRoom ? 'active' : ''}`;
@@ -132,10 +132,10 @@ function promptAddRoom() {
     let roomName = prompt("Nhập tên phòng mới (Ví dụ: Phòng VIP, Phòng Đôi 3...):");
     if (!roomName || roomName.trim() === "") return;
     
-    let newRoomId = 'room_' + Date.now(); // Tạo mã ID phòng duy nhất
+    let newRoomId = 'room_' + Date.now(); 
     db[currentUser].rooms.push({ id: newRoomId, name: roomName.trim() });
     
-    currentRoom = newRoomId; // Chuyển luôn sang phòng vừa tạo
+    currentRoom = newRoomId; 
     saveData();
     renderRooms();
     renderCalendar();
@@ -149,12 +149,9 @@ function deleteCurrentRoom() {
     let roomObj = db[currentUser].rooms.find(r => r.id === currentRoom);
     if (!confirm(`CẢNH BÁO: Bạn chắc chắn muốn xóa "${roomObj.name}"?\n\nTất cả lịch khách đặt của phòng này cũng sẽ bị XÓA VĨNH VIỄN!`)) return;
 
-    // Xóa phòng
     db[currentUser].rooms = db[currentUser].rooms.filter(r => r.id !== currentRoom);
-    // Xóa các lịch thuộc về phòng này
     db[currentUser].bookings = db[currentUser].bookings.filter(b => b.room !== currentRoom);
     
-    // Tự động chuyển về phòng đầu tiên trong danh sách
     currentRoom = db[currentUser].rooms[0].id;
     
     saveData();
@@ -164,13 +161,13 @@ function deleteCurrentRoom() {
 
 function switchRoom(roomId) {
     currentRoom = roomId;
-    renderRooms(); // Đổi class active
+    renderRooms(); 
     selectedForBook = [];
     selectedForDelete = [];
     renderCalendar();
 }
 
-// ================= CODE LỊCH & CHỨC NĂNG CŨ CÒN LẠI =================
+// ================= CODE LỊCH =================
 function changeMonth(step) {
     currentMonth += step;
     if (currentMonth < 0) { currentMonth = 11; currentYear--; }
@@ -246,9 +243,16 @@ function renderCalendar() {
     renderSidebar();
 }
 
+// ================= TÀI KHOẢN VÀ MENU =================
 function openAuth(mode) {
     authMode = mode;
     document.getElementById('auth-title').innerText = mode === 'login' ? "Đăng Nhập" : "Đăng Ký Mới";
+    
+    document.getElementById('auth-business').style.display = mode === 'register' ? 'block' : 'none';
+    document.getElementById('auth-business').value = '';
+    document.getElementById('auth-user').value = '';
+    document.getElementById('auth-pass').value = '';
+    
     document.getElementById('overlay').style.display = 'block';
     document.getElementById('modal-auth').style.display = 'block';
 }
@@ -256,17 +260,18 @@ function openAuth(mode) {
 function submitAuth() {
     let u = document.getElementById('auth-user').value.trim();
     let p = document.getElementById('auth-pass').value.trim();
-    if(!u || !p) return alert("Vui lòng điền đủ thông tin");
+    let b = document.getElementById('auth-business').value.trim(); 
 
     if (authMode === 'register') {
+        if(!u || !p || !b) return alert("Vui lòng điền đủ Tên Doanh Nghiệp, Tài khoản và Mật khẩu!");
         if(u === 'admin') return alert("Tên đăng nhập này không được phép sử dụng!");
         if(db[u]) return alert("Tài khoản đã tồn tại!");
         
-        // Khi tạo tài khoản mới, gán ngay danh sách phòng mặc định
-        db[u] = { password: p, bookings: [], rooms: [...defaultRooms] };
+        db[u] = { password: p, businessName: b, bookings: [], rooms: [...defaultRooms] };
         saveData();
         alert("Đăng ký thành công!");
     } else {
+        if(!u || !p) return alert("Vui lòng điền đủ tài khoản và mật khẩu!");
         if(db[u] && db[u].password === p) {
             currentUser = u;
             localStorage.setItem('homestay_loggedInUser', u);
@@ -279,9 +284,12 @@ function submitAuth() {
             document.getElementById('nav-login').style.display = 'none';
             document.getElementById('nav-logout').style.display = 'inline';
             document.getElementById('nav-revenue').style.display = 'inline';
-            document.getElementById('nav-changepass').style.display = 'inline';
+            document.getElementById('nav-edit-account').style.display = 'inline';
             document.getElementById('admin-controls').style.display = 'block';
             if (currentUser === 'admin') document.getElementById('nav-admin').style.display = 'inline';
+            
+            let bName = db[currentUser].businessName || 'HỆ THỐNG QUẢN LÝ';
+            document.getElementById('brand-name').innerText = bName.toUpperCase();
             
             selectedForBook = [];
             selectedForDelete = [];
@@ -302,16 +310,19 @@ function logout() {
     document.getElementById('nav-logout').style.display = 'none';
     document.getElementById('nav-revenue').style.display = 'none';
     document.getElementById('nav-admin').style.display = 'none';
-    document.getElementById('nav-changepass').style.display = 'none';
+    document.getElementById('nav-edit-account').style.display = 'none';
     document.getElementById('admin-controls').style.display = 'none';
     
-    currentRoom = 'don1'; // Trả về mặc định hiển thị
+    document.getElementById('brand-name').innerText = 'HỆ THỐNG QUẢN LÝ';
+    
+    currentRoom = 'don1'; 
     selectedForBook = [];
     selectedForDelete = [];
     renderRooms();
     renderCalendar();
 }
 
+// ================= ADMIN QUẢN LÝ =================
 function showAdmin() {
     if (currentUser !== 'admin') return alert("Chỉ Admin mới có quyền truy cập!");
     renderAdminList();
@@ -341,16 +352,37 @@ function editUserPassword(userToEdit) {
     }
 }
 
-function showChangePass() { document.getElementById('overlay').style.display = 'block'; document.getElementById('modal-changepass').style.display = 'block'; }
-function submitChangePass() {
-    let np = document.getElementById('new-pass').value.trim();
-    if(!np) return;
-    db[currentUser].password = np;
+// ================= SỬA THÔNG TIN TÀI KHOẢN (MỚI) =================
+function showEditAccount() { 
+    // Tự động điền Tên doanh nghiệp hiện tại vào ô nhập
+    document.getElementById('edit-business-name').value = db[currentUser].businessName || '';
+    document.getElementById('edit-password').value = ''; // Để trống ô mật khẩu
+    
+    document.getElementById('overlay').style.display = 'block'; 
+    document.getElementById('modal-edit-account').style.display = 'block'; 
+}
+
+function submitEditAccount() {
+    let newBName = document.getElementById('edit-business-name').value.trim();
+    let newPass = document.getElementById('edit-password').value.trim();
+    
+    if(!newBName) return alert("Tên doanh nghiệp không được để trống!");
+    
+    // 1. Lưu Tên doanh nghiệp mới
+    db[currentUser].businessName = newBName;
+    document.getElementById('brand-name').innerText = newBName.toUpperCase(); // Đổi UI trên góc trái ngay lập tức
+    
+    // 2. Chỉ lưu mật khẩu nếu người dùng có gõ chữ vào
+    if(newPass) {
+        db[currentUser].password = newPass;
+    }
+    
     saveData();
-    alert("Đổi thành công!");
+    alert("Cập nhật thông tin thành công!");
     closeModals();
 }
 
+// ================= LƯU & XÓA LỊCH =================
 function openBookModal() {
     if (selectedForBook.length === 0) return;
     selectedForBook.sort();
