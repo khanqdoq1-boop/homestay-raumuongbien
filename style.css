@@ -6,52 +6,210 @@ body {
     margin: 0; padding: 0;
     background-color: #ffffff; color: #000000;
 }
+
+/* ================= THANH MENU (HIỆU ỨNG GẠCH DƯỚI TRƯỢT) ================= */
 .top-bar {
     display: flex; justify-content: space-between;
     padding: 15px 20px; border-bottom: 1px solid #000; font-weight: bold; text-transform: uppercase;
 }
-.nav-right span { margin-left: 20px; cursor: pointer; }
-.nav-right span:hover { text-decoration: underline; }
+.nav-right span { 
+    margin-left: 20px; 
+    cursor: pointer; 
+    position: relative; /* Dùng cho hiệu ứng gạch dưới */
+    padding-bottom: 3px;
+}
+/* Tạo đường gạch dưới ẩn */
+.nav-right span::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background-color: #000;
+    transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.nav-right span:hover::after {
+    width: 100%; /* Khi hover, đường gạch trượt mượt mà ra */
+}
 
-.main-container { max-width: 800px; margin: 30px auto; }
+/* ================= BỐ CỤC CHÍNH VÀ CỘT TRÁI ================= */
+.layout-wrapper {
+    display: flex; max-width: 1100px; margin: 30px auto; gap: 20px;
+    align-items: flex-start; justify-content: center;
+}
+.main-container { margin: 0; flex: 1; max-width: 800px; }
 
-/* Tabs */
+/* HIỆU ỨNG THẺ DANH SÁCH BÊN TRÁI */
+.sidebar {
+    width: 280px; border: 1px solid #000; padding: 20px; background: #fff;
+    height: fit-content; max-height: 80vh; overflow-y: auto;
+}
+.sidebar h3 { margin-top: 0; text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; font-size: 16px; text-transform: uppercase; }
+.sidebar-item {
+    border: 1px solid #000; padding: 10px; margin-bottom: 10px; font-size: 13px; line-height: 1.6;
+    background: #fff;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.sidebar-item:hover {
+    transform: translate(5px, -3px); /* Đẩy nhẹ sang phải và lên trên */
+    box-shadow: 4px 4px 0px #000; /* Nổi khối 3D */
+}
+.sidebar-item b { display: inline-block; }
+
+/* ================= TABS PHÒNG ================= */
 .room-tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
 .tab {
     padding: 12px 40px; border: 1px solid #000; background: #fff;
     cursor: pointer; font-size: 16px; font-weight: bold;
+    transition: all 0.3s ease;
 }
-.tab.active { background: #000; color: #fff; }
+.tab:hover:not(.active) {
+    transform: translateY(-3px);
+    box-shadow: 3px 3px 0px #000;
+}
+.tab.active { background: #000; color: #fff; transform: scale(1.05); }
 
-/* Lịch */
-.calendar-container { border: 1px solid #000; padding: 30px; }
+/* ================= LỊCH VÀ HIỆU ỨNG Ô NGÀY ================= */
+.calendar-container { border: 1px solid #000; padding: 30px; transition: all 0.3s ease;}
 .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .btn-nav, .month-year-picker select, .month-year-picker input {
-    border: 1px solid #000; background: #fff; padding: 8px 12px;
-    font-weight: bold; cursor: pointer; font-size: 14px;
+    border: 1px solid #000; background: #fff; padding: 8px 12px; font-weight: bold; cursor: pointer; font-size: 14px;
+    transition: all 0.2s ease;
+}
+.btn-nav:hover, .month-year-picker select:hover, .month-year-picker input:hover {
+    background: #f0f0f0;
+    box-shadow: 2px 2px 0px #000;
 }
 .month-year-picker { display: flex; gap: 10px; }
 .month-year-picker input { width: 80px; text-align: center; }
 
-.weekdays {
-    display: grid; grid-template-columns: repeat(7, 1fr);
-    text-align: center; font-weight: bold; border-bottom: 1px solid #000;
-    padding-bottom: 15px; margin-bottom: 15px;
-}
+.weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 15px; margin-bottom: 15px; }
 .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
-.day {
-    aspect-ratio: 1; border: 1px solid #000; display: flex;
-    align-items: center; justify-content: center;
-    font-weight: bold; font-size: 16px; cursor: pointer;
-}
 
-/* Các trạng thái của ô lịch */
+/* HIỆU ỨNG Ô NGÀY (Cực kỳ xịn xò khi lướt chuột qua) */
+.day {
+    aspect-ratio: 1; border: 1px solid #000; display: flex; align-items: center; justify-content: center;
+    font-weight: bold; font-size: 16px; cursor: pointer; position: relative;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Hiệu ứng nảy (bounce) nhẹ */
+}
+.day:hover {
+    transform: translateY(-4px) scale(1.08); /* Phóng to và nảy lên */
+    box-shadow: 4px 4px 0px #000; /* Tạo khối nổi */
+    z-index: 10;
+}
 .day.empty { background: #fff; color: #000; }
-.day.empty:hover { background: #f0f0f0; }
 .day.selected-book { background: #e0e0e0; border: 3px dashed #000; }
 .day.booked { background: #000; color: #fff; }
-.day.booked:hover { opacity: 0.8; }
-.day.selected-delete { border: 3px solid red; color: red; } 
+.day.selected-delete { border: 3px solid red; color: red; background: #ffe6e6; } 
+
+.legend { display: flex; justify-content: center; gap: 30px; margin-top: 30px; font-weight: bold; font-size: 14px;}
+.legend-item { display: flex; align-items: center; gap: 10px; }
+.box { width: 25px; height: 25px; border: 1px solid #000; }
+.box-empty { background: #fff; }
+.box-selected-book { background: #e0e0e0; border: 2px dashed #000; }
+.box-booked { background: #000; }
+
+/* ================= NÚT BẤM (HIỆU ỨNG SWEEP ÁNH SÁNG & NỔI KHỐI) ================= */
+.admin-panel { margin-top: 20px; border: 1px solid #000; padding: 15px 20px; }
+.action-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 15px;}
+.btn-action { width: 100%; max-width: 300px; padding: 15px; font-size: 16px; }
+
+/* Nút Đen - Có vệt sáng chạy qua khi hover */
+.btn-black {
+    background: #000; color: #fff; border: 1px solid #000; padding: 12px; width: 100%;
+    cursor: pointer; font-weight: bold; font-size: 16px;
+    position: relative; overflow: hidden; /* Cần thiết cho vệt sáng */
+    transition: all 0.3s ease;
+}
+.btn-black::before {
+    content: ""; position: absolute; top: 0; left: -100%;
+    width: 50%; height: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: skewX(-25deg); /* Làm nghiêng vệt sáng */
+    transition: left 0.5s ease;
+}
+.btn-black:hover {
+    transform: translateY(-3px);
+    box-shadow: 5px 5px 0px #000; /* Nút nảy lên */
+}
+.btn-black:hover::before {
+    left: 150%; /* Vệt sáng quét qua */
+}
+
+/* Nút Đỏ */
+.btn-danger {
+    background: #fff; color: red; border: 2px solid red; font-weight: bold; cursor: pointer;
+    transition: all 0.3s ease;
+}
+.btn-danger:hover { 
+    background: red; color: white; 
+    transform: translateY(-3px);
+    box-shadow: 4px 4px 0px #000; 
+}
+.btn-cancel {
+    cursor: pointer; background: #fff; transition: all 0.2s ease;
+}
+.btn-cancel:hover { background: #000; color: #fff; }
+
+/* ================= MODALS (CỬA SỔ NỔI) ================= */
+.overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); z-index: 999; backdrop-filter: blur(3px); /* Làm mờ phông nền */ }
+.modal {
+    display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: #fff; border: 2px solid #000; padding: 30px; box-shadow: 10px 10px 0px #000; /* Bóng đổ khối lớn */
+    z-index: 1000; width: 380px; text-align: center;
+}
+.modal input { 
+    display: block; width: 100%; margin: 10px 0 20px 0; padding: 12px; border: 1px solid #000; font-size: 14px; 
+    transition: all 0.3s ease; outline: none;
+}
+.modal input:focus {
+    box-shadow: 3px 3px 0px #000;
+    transform: translateY(-2px);
+}
+.modal label { display: block; text-align: left; font-weight: bold; }
+* { box-sizing: border-box; font-family: "Courier New", Courier, monospace; }
+body { margin: 0; padding: 0; background-color: #ffffff; color: #000000; }
+
+.top-bar { display: flex; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid #000; font-weight: bold; text-transform: uppercase; }
+.nav-right span { margin-left: 20px; cursor: pointer; position: relative; padding-bottom: 3px; }
+.nav-right span::after { content: ''; position: absolute; width: 0; height: 2px; bottom: 0; left: 0; background-color: #000; transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+.nav-right span:hover::after { width: 100%; }
+
+.layout-wrapper { display: flex; max-width: 1100px; margin: 30px auto; gap: 20px; align-items: flex-start; justify-content: center; }
+.main-container { margin: 0; flex: 1; max-width: 800px; }
+
+.sidebar { width: 280px; border: 1px solid #000; padding: 20px; background: #fff; height: fit-content; max-height: 80vh; overflow-y: auto; }
+.sidebar h3 { margin-top: 0; text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; font-size: 16px; text-transform: uppercase; }
+.sidebar-item { border: 1px solid #000; padding: 10px; margin-bottom: 10px; font-size: 13px; line-height: 1.6; background: #fff; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+.sidebar-item:hover { transform: translate(5px, -3px); box-shadow: 4px 4px 0px #000; }
+.sidebar-item b { display: inline-block; }
+
+/* Khu vực Quản lý phòng */
+.room-management { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+.room-tabs { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.room-actions { display: flex; gap: 10px; justify-content: center; }
+
+.tab { padding: 12px 25px; border: 1px solid #000; background: #fff; cursor: pointer; font-size: 16px; font-weight: bold; transition: all 0.3s ease; }
+.tab:hover:not(.active) { transform: translateY(-3px); box-shadow: 3px 3px 0px #000; }
+.tab.active { background: #000; color: #fff; transform: scale(1.05); }
+
+.calendar-container { border: 1px solid #000; padding: 30px; transition: all 0.3s ease;}
+.calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.btn-nav, .month-year-picker select, .month-year-picker input { border: 1px solid #000; background: #fff; padding: 8px 12px; font-weight: bold; cursor: pointer; font-size: 14px; transition: all 0.2s ease; }
+.btn-nav:hover, .month-year-picker select:hover, .month-year-picker input:hover { background: #f0f0f0; box-shadow: 2px 2px 0px #000; }
+.month-year-picker { display: flex; gap: 10px; }
+.month-year-picker input { width: 80px; text-align: center; }
+
+.weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 15px; margin-bottom: 15px; }
+.days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+
+.day { aspect-ratio: 1; border: 1px solid #000; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; cursor: pointer; position: relative; transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.day:hover { transform: translateY(-4px) scale(1.08); box-shadow: 4px 4px 0px #000; z-index: 10; }
+.day.empty { background: #fff; color: #000; }
+.day.selected-book { background: #e0e0e0; border: 3px dashed #000; }
+.day.booked { background: #000; color: #fff; }
+.day.selected-delete { border: 3px solid red; color: red; background: #ffe6e6; } 
 
 .legend { display: flex; justify-content: center; gap: 30px; margin-top: 30px; font-weight: bold; font-size: 14px;}
 .legend-item { display: flex; align-items: center; gap: 10px; }
@@ -64,22 +222,22 @@ body {
 .action-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 15px;}
 .btn-action { width: 100%; max-width: 300px; padding: 15px; font-size: 16px; }
 
-.btn-danger {
-    background: #fff; color: red; border: 2px solid red; font-weight: bold; cursor: pointer;
-}
-.btn-danger:hover { background: red; color: white; }
+.btn-black { background: #000; color: #fff; border: 1px solid #000; padding: 12px; width: 100%; cursor: pointer; font-weight: bold; font-size: 16px; position: relative; overflow: hidden; transition: all 0.3s ease; }
+.btn-black::before { content: ""; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: rgba(255, 255, 255, 0.2); transform: skewX(-25deg); transition: left 0.5s ease; }
+.btn-black:hover { transform: translateY(-3px); box-shadow: 5px 5px 0px #000; }
+.btn-black:hover::before { left: 150%; }
 
-/* Modal */
-.overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); z-index: 999; }
-.modal {
-    display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    background: #fff; border: 2px solid #000; padding: 30px; box-shadow: 8px 8px 0px #000;
-    z-index: 1000; width: 380px; text-align: center;
-}
-.modal input { display: block; width: 100%; margin: 10px 0 20px 0; padding: 10px; border: 1px solid #000; font-size: 14px; }
+.btn-danger { background: #fff; color: red; border: 2px solid red; font-weight: bold; cursor: pointer; transition: all 0.3s ease; padding: 12px;}
+.btn-danger:hover { background: red; color: white; transform: translateY(-3px); box-shadow: 4px 4px 0px #000; }
+
+/* Nút phụ Thêm/Xóa phòng */
+.btn-small { width: auto; padding: 8px 15px; font-size: 13px; }
+
+.btn-cancel { cursor: pointer; background: #fff; transition: all 0.2s ease; }
+.btn-cancel:hover { background: #000; color: #fff; }
+
+.overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); z-index: 999; backdrop-filter: blur(3px); }
+.modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border: 2px solid #000; padding: 30px; box-shadow: 10px 10px 0px #000; z-index: 1000; width: 380px; text-align: center; }
+.modal input { display: block; width: 100%; margin: 10px 0 20px 0; padding: 12px; border: 1px solid #000; font-size: 14px; transition: all 0.3s ease; outline: none; }
+.modal input:focus { box-shadow: 3px 3px 0px #000; transform: translateY(-2px); }
 .modal label { display: block; text-align: left; font-weight: bold; }
-.btn-black {
-    background: #000; color: #fff; border: none; padding: 12px; width: 100%;
-    cursor: pointer; font-weight: bold; font-size: 16px;
-}
-.btn-black:hover { opacity: 0.8; }
