@@ -27,13 +27,17 @@
 
         <div class="main-container">
             <div class="room-management">
-                <div class="room-tabs" id="dynamic-room-tabs">
-                    <!-- Tab sẽ được render tự động -->
+                
+                <div id="branch-container" style="display:none; margin-bottom: 20px; gap: 15px; align-items: center; background: rgba(255,255,255,0.6); padding: 10px 25px; border-radius: 30px; border: 1px solid rgba(45,106,79,0.2);">
+                    <b style="color: #2d6a4f; font-size: 15px;">Đang chọn:</b>
+                    <select id="branch-select" onchange="switchBranch(this.value)" style="padding: 8px 15px; border-radius: 8px; font-weight: bold; outline: none; border: 1px solid rgba(45,106,79,0.4); background: #fff; color: #2d6a4f; font-size: 14px; cursor: pointer;"></select>
+                    <button class="btn-black btn-small" style="padding: 8px 15px; border-radius: 20px;" onclick="promptAddBranch()">+ Thêm Cơ Sở</button>
                 </div>
+
+                <div class="room-tabs" id="dynamic-room-tabs"></div>
                 
                 <div id="room-actions-container" class="room-actions" style="display: none;">
                     <button class="btn-black btn-small" onclick="promptAddRoom()">+ Thêm Phòng</button>
-                    <!-- Thêm ID cho nút Xóa Phòng -->
                     <button id="btn-delete-room" class="btn-danger btn-small" onclick="deleteCurrentRoom()">- Xóa Phòng Này</button>
                 </div>
             </div>
@@ -65,7 +69,6 @@
                     <div class="legend-item"><span class="box box-empty"></span> Trống</div>
                     <div class="legend-item"><span class="box box-selected-book"></span> Đang chọn</div>
                     <div class="legend-item"><span class="box box-booked"></span> Đã đặt</div>
-                    <!-- Thêm chú thích Đã Khóa -->
                     <div class="legend-item"><span class="box box-blocked"></span> Vướng lịch</div>
                 </div>
             </div>
@@ -73,9 +76,9 @@
             <div id="admin-controls" class="admin-panel" style="display: none;">
                 <p style="text-align: left; font-size: 14px;">
                     <b>Thao tác nhanh:</b><br>
-                    - <b>Đặt phòng:</b> Bấm vào các ô trống. Bấm "Lưu Lịch".<br>
-                    - <b>Xóa lịch:</b> Bấm vào các ô màu. Bấm "Xóa Lịch".<br>
-                    - <b>Nguyên Căn:</b> Đặt bên tab Nguyên Căn sẽ tự động khóa các phòng lẻ.
+                    - <b>Chuyển Cơ Sở:</b> Dùng menu thả xuống ở trên cùng.<br>
+                    - <b>Sửa Tên Cơ Sở:</b> Bấm vào nút "Tài Khoản" trên thanh menu.<br>
+                    - <b>Nguyên Căn:</b> Khóa chéo tự động cho từng cơ sở riêng biệt.<br>
                 </p>
                 <div class="action-buttons">
                     <button id="btn-book-action" class="btn-black btn-action" style="display: none;" onclick="openBookModal()">Lưu Lịch Đặt Phòng</button>
@@ -85,7 +88,27 @@
         </div>
     </div>
 
+    <!-- CÁC HỘP THOẠI MODAL -->
     <div id="overlay" class="overlay" onclick="closeModals()"></div>
+
+    <div id="modal-custom-prompt" class="modal">
+        <h3 id="prompt-title">Nhập Thông Tin</h3>
+        <label id="prompt-label">Nội dung:</label>
+        <input type="text" id="prompt-input" placeholder="Nhập vào đây...">
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button class="btn-cancel" style="flex: 1;" onclick="closeModals()">Hủy</button>
+            <button class="btn-black" style="flex: 1;" id="prompt-confirm-btn">Xác Nhận</button>
+        </div>
+    </div>
+
+    <div id="modal-custom-confirm" class="modal">
+        <h3 id="confirm-title" style="color: #e63946;">Xác Nhận</h3>
+        <p id="confirm-message" style="font-size: 14px; margin-bottom: 20px; line-height: 1.5; color: #555;"></p>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-cancel" style="flex: 1;" onclick="closeModals()">Hủy</button>
+            <button class="btn-danger" style="flex: 1;" id="confirm-agree-btn">Đồng Ý</button>
+        </div>
+    </div>
 
     <div id="modal-auth" class="modal">
         <h3 id="auth-title">Đăng nhập</h3>
@@ -95,12 +118,19 @@
         <button class="btn-black" onclick="submitAuth()">Xác nhận</button>
     </div>
 
+    <!-- CẬP NHẬT: HỘP THOẠI TÀI KHOẢN CÓ THÊM PHẦN SỬA CƠ SỞ -->
     <div id="modal-edit-account" class="modal">
-        <h3>Thông Tin Tài Khoản</h3>
-        <label>Tên Doanh Nghiệp:</label>
+        <h3>Thiết Lập Thông Tin</h3>
+        
+        <label>Tên Doanh Nghiệp (Góc trái trên cùng):</label>
         <input type="text" id="edit-business-name" placeholder="Ví dụ: Homestay Rau Muống Biển">
-        <label>Mật khẩu mới (bỏ trống nếu không đổi):</label>
+        
+        <label>Tên Cơ Sở đang chọn (Nhà nghỉ hiện tại):</label>
+        <input type="text" id="edit-branch-name" placeholder="Ví dụ: Cơ sở 1">
+
+        <label>Mật khẩu mới (Bỏ trống nếu không đổi):</label>
         <input type="password" id="edit-password" placeholder="Nhập mật khẩu mới...">
+        
         <button class="btn-black" onclick="submitEditAccount()">Lưu Thay Đổi</button>
     </div>
 
