@@ -12,9 +12,7 @@
         <div class="nav-right">
             <span id="nav-revenue" style="display:none; margin-right: 20px;">Doanh thu: 0 VNĐ</span>
             <span id="nav-admin" style="display:none;" onclick="showAdmin()">Quản lý TK</span>
-            <!-- Thay nút Đổi MK thành nút Tài Khoản -->
             <span id="nav-edit-account" style="display:none;" onclick="showEditAccount()">Tài khoản</span>
-            
             <span id="nav-register" onclick="openAuth('register')">Đăng ký</span>
             <span id="nav-login" onclick="openAuth('login')">Đăng nhập</span>
             <span id="nav-logout" style="display:none;" onclick="logout()">Đăng xuất</span>
@@ -22,28 +20,24 @@
     </div>
 
     <div class="layout-wrapper">
-        <!-- CỘT TRÁI -->
         <div class="sidebar" id="sidebar-container" style="display: none;">
             <h3>Lịch Đã Đặt</h3>
             <div id="booking-list-sidebar"></div>
         </div>
 
-        <!-- CỘT PHẢI -->
         <div class="main-container">
             <div class="room-management">
                 <div class="room-tabs" id="dynamic-room-tabs">
-                    <button class="tab active">Phòng Đơn</button>
-                    <button class="tab">Phòng Đôi 1</button>
-                    <button class="tab">Phòng Đôi 2</button>
+                    <!-- Tab sẽ được render tự động -->
                 </div>
                 
                 <div id="room-actions-container" class="room-actions" style="display: none;">
                     <button class="btn-black btn-small" onclick="promptAddRoom()">+ Thêm Phòng</button>
-                    <button class="btn-danger btn-small" onclick="deleteCurrentRoom()">- Xóa Phòng Này</button>
+                    <!-- Thêm ID cho nút Xóa Phòng -->
+                    <button id="btn-delete-room" class="btn-danger btn-small" onclick="deleteCurrentRoom()">- Xóa Phòng Này</button>
                 </div>
             </div>
 
-            <!-- Khung Lịch -->
             <div class="calendar-container">
                 <div class="calendar-header">
                     <button class="btn-nav" onclick="changeMonth(-1)">&#10094; Trước</button>
@@ -71,6 +65,8 @@
                     <div class="legend-item"><span class="box box-empty"></span> Trống</div>
                     <div class="legend-item"><span class="box box-selected-book"></span> Đang chọn</div>
                     <div class="legend-item"><span class="box box-booked"></span> Đã đặt</div>
+                    <!-- Thêm chú thích Đã Khóa -->
+                    <div class="legend-item"><span class="box box-blocked"></span> Vướng lịch</div>
                 </div>
             </div>
 
@@ -78,8 +74,8 @@
                 <p style="text-align: left; font-size: 14px;">
                     <b>Thao tác nhanh:</b><br>
                     - <b>Đặt phòng:</b> Bấm vào các ô trống. Bấm "Lưu Lịch".<br>
-                    - <b>Xóa lịch:</b> Bấm vào các ô màu đen. Bấm "Xóa Lịch".<br>
-                    - <b>Quản lý phòng:</b> Dùng nút Thêm/Xóa phòng ở góc trên.
+                    - <b>Xóa lịch:</b> Bấm vào các ô màu. Bấm "Xóa Lịch".<br>
+                    - <b>Nguyên Căn:</b> Đặt bên tab Nguyên Căn sẽ tự động khóa các phòng lẻ.
                 </p>
                 <div class="action-buttons">
                     <button id="btn-book-action" class="btn-black btn-action" style="display: none;" onclick="openBookModal()">Lưu Lịch Đặt Phòng</button>
@@ -91,7 +87,6 @@
 
     <div id="overlay" class="overlay" onclick="closeModals()"></div>
 
-    <!-- Modal Đăng Nhập / Đăng Ký -->
     <div id="modal-auth" class="modal">
         <h3 id="auth-title">Đăng nhập</h3>
         <input type="text" id="auth-business" placeholder="Tên Doanh Nghiệp (VD: Khách sạn ABC)" style="display: none;">
@@ -100,25 +95,20 @@
         <button class="btn-black" onclick="submitAuth()">Xác nhận</button>
     </div>
 
-    <!-- HỘP THOẠI MỚI: SỬA THÔNG TIN TÀI KHOẢN -->
     <div id="modal-edit-account" class="modal">
         <h3>Thông Tin Tài Khoản</h3>
         <label>Tên Doanh Nghiệp:</label>
         <input type="text" id="edit-business-name" placeholder="Ví dụ: Homestay Rau Muống Biển">
-        
         <label>Mật khẩu mới (bỏ trống nếu không đổi):</label>
         <input type="password" id="edit-password" placeholder="Nhập mật khẩu mới...">
-        
         <button class="btn-black" onclick="submitEditAccount()">Lưu Thay Đổi</button>
     </div>
 
-    <!-- Modal Admin -->
     <div id="modal-admin" class="modal">
         <h3>Danh sách Tài Khoản</h3>
         <div id="account-list" style="text-align: left; max-height: 200px; overflow-y: auto;"></div>
     </div>
 
-    <!-- Modal Đặt Phòng -->
     <div id="modal-book" class="modal">
         <h3>Thông Tin Đặt Phòng</h3>
         <p style="text-align:left; font-size: 14px;">Các ngày đã chọn (Năm-Tháng-Ngày): <br><b id="book-dates-lbl" style="color: #555;"></b></p>
