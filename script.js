@@ -14,6 +14,7 @@ const database = firebase.database();
 
 let db = {};
 let currentUser = localStorage.getItem('homestay_loggedInUser') || null; 
+let currentBranch = 'branch_default';
 let currentRoom = 'don1'; 
 let currentYear = 2026;
 let currentMonth = 7;
@@ -21,10 +22,13 @@ let authMode = 'login';
 let selectedForBook = [];   
 let selectedForDelete = []; 
 
+const defaultBranches = [
+    { id: 'branch_default', name: 'Cơ sở Chính' }
+];
 const defaultRooms = [
-    { id: 'don1', name: 'Phòng Đơn' },
-    { id: 'doi1', name: 'Phòng Đôi 1' },
-    { id: 'doi2', name: 'Phòng Đôi 2' }
+    { id: 'don1', name: 'Phòng Đơn', branchId: 'branch_default' },
+    { id: 'doi1', name: 'Phòng Đôi 1', branchId: 'branch_default' },
+    { id: 'doi2', name: 'Phòng Đôi 2', branchId: 'branch_default' }
 ];
 
 database.ref('homestayDB_V4').on('value', (snapshot) => {
@@ -32,7 +36,7 @@ database.ref('homestayDB_V4').on('value', (snapshot) => {
     if (data) {
         db = data;
     } else {
-        db['admin'] = { password: 'admin', businessName: 'HOMESTAY RAU MUỐNG BIỂN - NINH HÒA', bookings: [], rooms: [...defaultRooms] };
+        db['admin'] = { password: 'admin', businessName: 'HOMESTAY RAU MUỐNG BIỂN', bookings: [], branches: [...defaultBranches], rooms: [...defaultRooms] };
         saveData();
     }
     
@@ -45,11 +49,24 @@ database.ref('homestayDB_V4').on('value', (snapshot) => {
 
     for(let user in db) {
         if(!db[user].bookings) db[user].bookings = [];
+        
+        if(!db[user].branches || db[user].branches.length === 0) {
+            db[user].branches = [...defaultBranches];
+            hasDeletedOldData = true; 
+        }
         if(!db[user].rooms || db[user].rooms.length === 0) {
             db[user].rooms = [...defaultRooms];
             hasDeletedOldData = true; 
         }
         
+        db[user].rooms.forEach(r => {
+            if (!r.branchId) { r.branchId = 'branch_default'; hasDeletedOldData = true; }
+        });
+        
+        db[user].bookings.forEach(b => {
+            if (b.room === 'nguyen_can') { b.room = 'nguyen_can_branch_default'; hasDeletedOldData = true; }
+        });
+
         let originalLength = db[user].bookings.length;
         db[user].bookings = db[user].bookings.filter(b => {
             let maxDate = b.dates.reduce((max, d) => d > max ? d : max, "0000-00-00");
@@ -61,16 +78,24 @@ database.ref('homestayDB_V4').on('value', (snapshot) => {
     if(hasDeletedOldData) saveData();
     
     if (currentUser && db[currentUser]) {
-        let roomExists = db[currentUser].rooms.find(r => r.id === currentRoom);
-        if (!roomExists && db[currentUser].rooms.length > 0 && currentRoom !== 'nguyen_can') {
-            currentRoom = db[currentUser].rooms[0].id;
+        let branchExists = db[currentUser].branches.find(br => br.id === currentBranch);
+        if(!branchExists && db[currentUser].branches.length > 0) currentBranch = db[currentUser].branches[0].id;
+        
+        let roomExists = db[currentUser].rooms.find(r => r.id === currentRoom && r.branchId === currentBranch);
+        let isNguyenCan = currentRoom === ('nguyen_can_' + currentBranch);
+        
+        if (!roomExists && !isNguyenCan) {
+            let branchRooms = db[currentUser].rooms.filter(r => r.branchId === currentBranch);
+            currentRoom = branchRooms.length > 0 ? branchRooms[0].id : ('nguyen_can_' + currentBranch);
         }
+        
         let bName = db[currentUser].businessName || 'HỆ THỐNG QUẢN LÝ';
         document.getElementById('brand-name').innerText = bName.toUpperCase();
     } else {
         document.getElementById('brand-name').innerText = 'HỆ THỐNG QUẢN LÝ';
     }
     
+    renderBranches();
     renderRooms();
     renderCalendar();
     if(currentUser === 'admin' && document.getElementById('modal-admin').style.display === 'block') renderAdminList();
@@ -93,6 +118,89 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
+// ================= HỆ THỐNG HỘP THOẠI XỊN XÒ =================
+function showCustomPrompt(title, label, isPassword, confirmCallback) {
+    document.getElementById('prompt-title').innerText = title;
+    document.getElementById('prompt-label').innerText = label;
+    let inputEl = document.getElementById('prompt-input');
+    inputEl.value = "";
+    inputEl.type = isPassword ? "password" : "text";
+    
+    document.getElementById('prompt-confirm-btn').onclick = function() {
+        let val = inputEl.value.trim();
+        confirmCallback(val);
+    };
+    
+    document.getElementById('overlay').style.display = 'block';
+    document.getElementById('modal-custom-prompt').style.display = 'block';
+    setTimeout(() => inputEl.focus(), 100);
+}
+
+function showCustomConfirm(title, message, confirmCallback) {
+    document.getElementById('confirm-title').innerText = title;
+    document.getElementById('confirm-message').innerHTML = message;
+    
+    document.getElementById('confirm-agree-btn').onclick = confirmCallback;
+    
+    document.getElementById('overlay').style.display = 'block';
+    document.getElementById('modal-custom-confirm').style.display = 'block';
+}
+
+// ================= QUẢN LÝ CƠ SỞ (NHÀ NGHỈ) =================
+function renderBranches() {
+    const branchContainer = document.getElementById('branch-container');
+    const branchSelect = document.getElementById('branch-select');
+    if (!currentUser || !db[currentUser]) {
+        branchContainer.style.display = 'none'; return;
+    }
+    
+    branchContainer.style.display = 'flex';
+    branchSelect.innerHTML = '';
+    
+    db[currentUser].branches.forEach(br => {
+        let opt = document.createElement('option');
+        opt.value = br.id;
+        opt.innerText = br.name;
+        if (br.id === currentBranch) opt.selected = true;
+        branchSelect.appendChild(opt);
+    });
+}
+
+function switchBranch(branchId) {
+    currentBranch = branchId;
+    let branchRooms = db[currentUser].rooms.filter(r => r.branchId === currentBranch);
+    if (branchRooms.length > 0) {
+        currentRoom = branchRooms[0].id;
+    } else {
+        currentRoom = 'nguyen_can_' + currentBranch;
+    }
+    selectedForBook = []; selectedForDelete = [];
+    renderRooms(); renderCalendar();
+}
+
+function promptAddBranch() {
+    showCustomPrompt(
+        "Thêm Cơ Sở Mới", 
+        "Nhập tên Cơ sở/Nhà nghỉ (VD: Khách sạn 2, Chi nhánh Bãi Biển...):", 
+        false, 
+        function(bName) {
+            if (!bName) return alert("Vui lòng không để trống tên cơ sở!");
+            
+            let newBranchId = 'branch_' + Date.now();
+            db[currentUser].branches.push({ id: newBranchId, name: bName });
+            
+            let newRoomId = 'room_' + Date.now();
+            db[currentUser].rooms.push({ id: newRoomId, name: 'Phòng 1', branchId: newBranchId });
+            
+            currentBranch = newBranchId;
+            currentRoom = newRoomId;
+            saveData();
+            renderBranches(); renderRooms(); renderCalendar();
+            closeModals();
+        }
+    );
+}
+
 // ================= QUẢN LÝ PHÒNG ĐỘNG + NGUYÊN CĂN =================
 function renderRooms() {
     const tabsContainer = document.getElementById('dynamic-room-tabs');
@@ -100,21 +208,15 @@ function renderRooms() {
     const btnDeleteRoom = document.getElementById('btn-delete-room');
     
     if (!currentUser || !db[currentUser]) {
-        tabsContainer.innerHTML = `
-            <button class="tab active">Phòng Đơn</button>
-            <button class="tab">Phòng Đôi 1</button>
-            <button class="tab">Phòng Đôi 2</button>
-            <button class="tab" style="border-color:#2d6a4f; color:#2d6a4f;">🌟 Nguyên Căn</button>
-        `;
-        if (roomActions) roomActions.style.display = 'none';
-        return;
+        tabsContainer.innerHTML = `<button class="tab active">Phòng Đơn</button><button class="tab">🌟 Nguyên Căn</button>`;
+        if (roomActions) roomActions.style.display = 'none'; return;
     }
 
     if (roomActions) roomActions.style.display = 'flex';
     tabsContainer.innerHTML = '';
     
-    // Các phòng lẻ
-    db[currentUser].rooms.forEach(room => {
+    let branchRooms = db[currentUser].rooms.filter(r => r.branchId === currentBranch);
+    branchRooms.forEach(room => {
         const btn = document.createElement('button');
         btn.className = `tab ${room.id === currentRoom ? 'active' : ''}`;
         btn.innerText = room.name;
@@ -122,91 +224,105 @@ function renderRooms() {
         tabsContainer.appendChild(btn);
     });
 
-    // Thêm Tab Nguyên Căn đặc biệt
+    let nguyenCanId = 'nguyen_can_' + currentBranch;
     const btnNguyenCan = document.createElement('button');
-    btnNguyenCan.className = `tab ${currentRoom === 'nguyen_can' ? 'active' : ''}`;
+    btnNguyenCan.className = `tab ${currentRoom === nguyenCanId ? 'active' : ''}`;
     btnNguyenCan.innerHTML = '🌟 Thuê Nguyên Căn';
-    if(currentRoom !== 'nguyen_can') {
+    if(currentRoom !== nguyenCanId) {
         btnNguyenCan.style.border = '2px solid #2d6a4f';
         btnNguyenCan.style.color = '#2d6a4f';
     }
-    btnNguyenCan.onclick = () => switchRoom('nguyen_can');
+    btnNguyenCan.onclick = () => switchRoom(nguyenCanId);
     tabsContainer.appendChild(btnNguyenCan);
 
-    // Không cho phép xóa Nguyên Căn
     if (btnDeleteRoom) {
-        btnDeleteRoom.style.display = currentRoom === 'nguyen_can' ? 'none' : 'inline-block';
+        btnDeleteRoom.style.display = currentRoom === nguyenCanId ? 'none' : 'inline-block';
     }
 }
 
 function promptAddRoom() {
-    let roomName = prompt("Nhập tên phòng mới (Ví dụ: Phòng VIP, Phòng Đôi 3...):");
-    if (!roomName || roomName.trim() === "") return;
-    let newRoomId = 'room_' + Date.now(); 
-    db[currentUser].rooms.push({ id: newRoomId, name: roomName.trim() });
-    currentRoom = newRoomId; 
-    saveData();
-    renderRooms();
-    renderCalendar();
+    showCustomPrompt(
+        "Thêm Phòng Mới", 
+        "Nhập tên phòng (Ví dụ: Phòng VIP, Phòng Đôi 3...):", 
+        false, 
+        function(roomName) {
+            if (!roomName) return alert("Vui lòng không để trống tên phòng!");
+            
+            let newRoomId = 'room_' + Date.now(); 
+            db[currentUser].rooms.push({ id: newRoomId, name: roomName, branchId: currentBranch });
+            currentRoom = newRoomId; 
+            saveData();
+            renderRooms(); renderCalendar();
+            closeModals();
+        }
+    );
 }
 
 function deleteCurrentRoom() {
-    if (currentRoom === 'nguyen_can') return;
-    if (db[currentUser].rooms.length <= 1) return alert("Phải giữ lại ít nhất 1 phòng trong hệ thống!");
+    if (currentRoom.startsWith('nguyen_can_')) return;
+    let branchRooms = db[currentUser].rooms.filter(r => r.branchId === currentBranch);
+    if (branchRooms.length <= 1) return alert("Phải giữ lại ít nhất 1 phòng cho cơ sở này!");
     
     let roomObj = db[currentUser].rooms.find(r => r.id === currentRoom);
-    if (!confirm(`CẢNH BÁO: Bạn chắc chắn muốn xóa "${roomObj.name}"?\nTất cả lịch của phòng này sẽ bị XÓA VĨNH VIỄN!`)) return;
-
-    db[currentUser].rooms = db[currentUser].rooms.filter(r => r.id !== currentRoom);
-    db[currentUser].bookings = db[currentUser].bookings.filter(b => b.room !== currentRoom);
-    currentRoom = db[currentUser].rooms[0].id;
-    saveData();
-    renderRooms();
-    renderCalendar();
+    
+    showCustomConfirm(
+        "Cảnh Báo Xóa Phòng",
+        `Bạn có chắc chắn muốn xóa <b>${roomObj.name}</b>?<br><br>Tất cả lịch đặt của phòng này sẽ bị <b>XÓA VĨNH VIỄN</b>!`,
+        function() {
+            db[currentUser].rooms = db[currentUser].rooms.filter(r => r.id !== currentRoom);
+            db[currentUser].bookings = db[currentUser].bookings.filter(b => b.room !== currentRoom);
+            
+            let remaining = db[currentUser].rooms.filter(r => r.branchId === currentBranch);
+            currentRoom = remaining[0].id;
+            saveData();
+            renderRooms(); renderCalendar();
+            closeModals();
+        }
+    );
 }
 
 function switchRoom(roomId) {
     currentRoom = roomId;
     renderRooms(); 
-    selectedForBook = [];
-    selectedForDelete = [];
+    selectedForBook = []; selectedForDelete = [];
     renderCalendar();
 }
 
-// ================= LOGIC KIỂM TRA ĐỤNG LỊCH =================
+// ================= LOGIC KIỂM TRA ĐỤNG LỊCH CHÉO =================
 function getBookingInfoForDate(dateStr) {
     if(!currentUser || !db[currentUser]) return { status: 'free' };
 
     let myRoomBooking = null;
     let wholeHouseBooking = null;
     let otherRoomBookings = [];
+    let nguyenCanId = 'nguyen_can_' + currentBranch;
 
     for(let b of db[currentUser].bookings) {
         if (b.dates.includes(dateStr)) {
             if (b.room === currentRoom) {
                 myRoomBooking = b;
-            } else if (b.room === 'nguyen_can') {
+            } else if (b.room === nguyenCanId) {
                 wholeHouseBooking = b;
             } else {
-                otherRoomBookings.push(b);
+                let r = db[currentUser].rooms.find(x => x.id === b.room);
+                if (r && r.branchId === currentBranch) {
+                    otherRoomBookings.push({ booking: b, roomName: r.name });
+                }
             }
         }
     }
 
-    if (currentRoom === 'nguyen_can') {
+    if (currentRoom === nguyenCanId) {
         if (myRoomBooking) return { status: 'booked', booking: myRoomBooking };
         if (otherRoomBookings.length > 0) {
-            let bookedRoomNames = otherRoomBookings.map(b => {
-                let r = db[currentUser].rooms.find(x => x.id === b.room);
-                return r ? r.name : 'Phòng khác';
-            });
+            let bookedRoomNames = otherRoomBookings.map(item => item.roomName);
             let uniqueNames = [...new Set(bookedRoomNames)];
             return { status: 'blocked', reason: `🔒 Đang vướng khách ở: ${uniqueNames.join(', ')}` };
         }
         return { status: 'free' };
     } else {
         if (myRoomBooking) return { status: 'booked', booking: myRoomBooking };
-        if (wholeHouseBooking) return { status: 'blocked', reason: `🔒 Đã khóa do có khách thuê Nguyên Căn (${wholeHouseBooking.guestName})` };
+        if (wholeHouseBooking) return { status: 'blocked', reason: `🔒 Khóa: Đã cho thuê Nguyên Căn (${wholeHouseBooking.guestName})` };
         return { status: 'free' };
     }
 }
@@ -246,6 +362,18 @@ function renderCalendar() {
     for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div></div>`;
 
     let totalRevenue = 0;
+    
+    if (currentUser && db[currentUser]) {
+        let branchRoomIds = db[currentUser].rooms.filter(r => r.branchId === currentBranch).map(r => r.id);
+        branchRoomIds.push('nguyen_can_' + currentBranch); 
+        
+        db[currentUser].bookings.forEach(b => {
+            if (branchRoomIds.includes(b.room)) {
+                totalRevenue += b.price;
+            }
+        });
+    }
+
     for (let i = 1; i <= daysInMonth; i++) {
         let dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
         let bookingInfo = getBookingInfoForDate(dateStr);
@@ -271,8 +399,7 @@ function renderCalendar() {
     }
 
     if(currentUser) {
-        db[currentUser].bookings.forEach(b => totalRevenue += b.price);
-        document.getElementById('nav-revenue').innerText = `Doanh Thu: ${totalRevenue.toLocaleString()} VNĐ`;
+        document.getElementById('nav-revenue').innerText = `Doanh Thu Cơ Sở: ${totalRevenue.toLocaleString()} VNĐ`;
         document.getElementById('btn-book-action').style.display = selectedForBook.length > 0 ? 'block' : 'none';
         
         let btnDelete = document.getElementById('btn-delete-action');
@@ -319,7 +446,7 @@ function submitAuth() {
         if(u === 'admin') return alert("Tên đăng nhập này không được phép sử dụng!");
         if(db[u]) return alert("Tài khoản đã tồn tại!");
         
-        db[u] = { password: p, businessName: b, bookings: [], rooms: [...defaultRooms] };
+        db[u] = { password: p, businessName: b, bookings: [], branches: [...defaultBranches], rooms: [...defaultRooms] };
         saveData();
         alert("Đăng ký thành công!");
     } else {
@@ -327,7 +454,10 @@ function submitAuth() {
         if(db[u] && db[u].password === p) {
             currentUser = u;
             localStorage.setItem('homestay_loggedInUser', u);
-            if (db[currentUser].rooms && db[currentUser].rooms.length > 0) currentRoom = db[currentUser].rooms[0].id;
+            
+            if (db[currentUser].branches && db[currentUser].branches.length > 0) currentBranch = db[currentUser].branches[0].id;
+            let branchRooms = db[currentUser].rooms.filter(r => r.branchId === currentBranch);
+            currentRoom = branchRooms.length > 0 ? branchRooms[0].id : ('nguyen_can_' + currentBranch);
             
             document.getElementById('nav-register').style.display = 'none';
             document.getElementById('nav-login').style.display = 'none';
@@ -340,10 +470,8 @@ function submitAuth() {
             let bName = db[currentUser].businessName || 'HỆ THỐNG QUẢN LÝ';
             document.getElementById('brand-name').innerText = bName.toUpperCase();
             
-            selectedForBook = [];
-            selectedForDelete = [];
-            renderRooms();
-            renderCalendar();
+            selectedForBook = []; selectedForDelete = [];
+            renderBranches(); renderRooms(); renderCalendar();
         } else {
             return alert("Sai thông tin!");
         }
@@ -363,11 +491,9 @@ function logout() {
     document.getElementById('admin-controls').style.display = 'none';
     document.getElementById('brand-name').innerText = 'HỆ THỐNG QUẢN LÝ';
     
-    currentRoom = 'don1'; 
-    selectedForBook = [];
-    selectedForDelete = [];
-    renderRooms();
-    renderCalendar();
+    currentBranch = 'branch_default'; currentRoom = 'don1'; 
+    selectedForBook = []; selectedForDelete = [];
+    renderBranches(); renderRooms(); renderCalendar();
 }
 
 function showAdmin() {
@@ -390,30 +516,59 @@ function renderAdminList() {
 }
 
 function editUserPassword(userToEdit) {
-    let newPass = prompt(`Nhập mật khẩu mới cho tài khoản "${userToEdit}":`);
-    if (newPass !== null && newPass.trim() !== "") {
-        db[userToEdit].password = newPass.trim();
-        saveData();
-        renderAdminList(); 
-        alert(`Đã đổi mật khẩu cho tài khoản ${userToEdit} thành công!`);
-    }
+    showCustomPrompt(
+        "Đổi Mật Khẩu Khách", 
+        `Mật khẩu mới cho tài khoản "${userToEdit}":`, 
+        true, 
+        function(newPass) {
+            if (newPass !== "") {
+                db[userToEdit].password = newPass;
+                saveData();
+                renderAdminList(); 
+                alert(`Đã đổi mật khẩu cho tài khoản ${userToEdit} thành công!`);
+            }
+            closeModals();
+        }
+    );
 }
 
+// CẬP NHẬT: TỰ ĐỘNG ĐIỀN TÊN CƠ SỞ HIỆN TẠI VÀO Ô SỬA
 function showEditAccount() { 
     document.getElementById('edit-business-name').value = db[currentUser].businessName || '';
+    
+    // Tự động lấy tên cơ sở đang chọn (menu thả xuống) hiển thị vào ô nhập liệu
+    let currentBranchObj = db[currentUser].branches.find(b => b.id === currentBranch);
+    document.getElementById('edit-branch-name').value = currentBranchObj ? currentBranchObj.name : '';
+    
     document.getElementById('edit-password').value = ''; 
     document.getElementById('overlay').style.display = 'block'; 
     document.getElementById('modal-edit-account').style.display = 'block'; 
 }
 
+// CẬP NHẬT: LƯU TÊN CƠ SỞ VÀO DATABASE
 function submitEditAccount() {
     let newBName = document.getElementById('edit-business-name').value.trim();
+    let newBranchName = document.getElementById('edit-branch-name').value.trim();
     let newPass = document.getElementById('edit-password').value.trim();
+    
     if(!newBName) return alert("Tên doanh nghiệp không được để trống!");
+    if(!newBranchName) return alert("Tên cơ sở không được để trống!");
+    
+    // 1. Lưu Tên Doanh Nghiệp
     db[currentUser].businessName = newBName;
     document.getElementById('brand-name').innerText = newBName.toUpperCase(); 
+    
+    // 2. Lưu Tên Cơ Sở đang được chọn
+    let currentBranchObj = db[currentUser].branches.find(b => b.id === currentBranch);
+    if (currentBranchObj) {
+        currentBranchObj.name = newBranchName;
+    }
+
+    // 3. Đổi mật khẩu nếu có nhập
     if(newPass) db[currentUser].password = newPass;
+    
     saveData();
+    renderBranches(); // Ép Menu thả xuống cập nhật tên mới ngay lập tức
     alert("Cập nhật thông tin thành công!");
     closeModals();
 }
@@ -450,11 +605,18 @@ function submitBooking() {
 
 function deleteSelected() {
     if(selectedForDelete.length === 0) return;
-    if(!confirm(`Bạn muốn xóa ${selectedForDelete.length} lịch đặt phòng này?`)) return;
-    db[currentUser].bookings = db[currentUser].bookings.filter(b => !selectedForDelete.includes(b.id));
-    selectedForDelete = [];
-    saveData();
-    renderCalendar();
+    
+    showCustomConfirm(
+        "Xóa Lịch Đặt Phòng",
+        `Bạn có chắc chắn muốn xóa <b>${selectedForDelete.length}</b> lịch đặt phòng đã chọn không?`,
+        function() {
+            db[currentUser].bookings = db[currentUser].bookings.filter(b => !selectedForDelete.includes(b.id));
+            selectedForDelete = [];
+            saveData();
+            renderCalendar();
+            closeModals();
+        }
+    );
 }
 
 function closeModals() {
