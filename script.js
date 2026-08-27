@@ -36,9 +36,7 @@ database.ref('homestayDB_V4').on('value', (snapshot) => {
         saveData();
     }
     
-    if (currentUser && !db[currentUser]) {
-        logout();
-    }
+    if (currentUser && !db[currentUser]) logout();
     
     let hasDeletedOldData = false;
     let today = new Date();
@@ -57,7 +55,6 @@ database.ref('homestayDB_V4').on('value', (snapshot) => {
             let maxDate = b.dates.reduce((max, d) => d > max ? d : max, "0000-00-00");
             return maxDate >= cutoffDate; 
         });
-        
         if(db[user].bookings.length !== originalLength) hasDeletedOldData = true;
     }
     
@@ -65,10 +62,9 @@ database.ref('homestayDB_V4').on('value', (snapshot) => {
     
     if (currentUser && db[currentUser]) {
         let roomExists = db[currentUser].rooms.find(r => r.id === currentRoom);
-        if (!roomExists && db[currentUser].rooms.length > 0) {
+        if (!roomExists && db[currentUser].rooms.length > 0 && currentRoom !== 'nguyen_can') {
             currentRoom = db[currentUser].rooms[0].id;
         }
-        
         let bName = db[currentUser].businessName || 'HỆ THỐNG QUẢN LÝ';
         document.getElementById('brand-name').innerText = bName.toUpperCase();
     } else {
@@ -77,10 +73,7 @@ database.ref('homestayDB_V4').on('value', (snapshot) => {
     
     renderRooms();
     renderCalendar();
-    
-    if(currentUser === 'admin' && document.getElementById('modal-admin').style.display === 'block') {
-        renderAdminList();
-    }
+    if(currentUser === 'admin' && document.getElementById('modal-admin').style.display === 'block') renderAdminList();
 });
 
 function saveData() { database.ref('homestayDB_V4').set(db); }
@@ -94,23 +87,24 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('nav-login').style.display = 'none';
         document.getElementById('nav-logout').style.display = 'inline';
         document.getElementById('nav-revenue').style.display = 'inline';
-        document.getElementById('nav-edit-account').style.display = 'inline'; // Hiển thị nút Tài khoản
+        document.getElementById('nav-edit-account').style.display = 'inline';
         document.getElementById('admin-controls').style.display = 'block';
-        
         if (currentUser === 'admin') document.getElementById('nav-admin').style.display = 'inline';
     }
 });
 
-// ================= QUẢN LÝ PHÒNG ĐỘNG =================
+// ================= QUẢN LÝ PHÒNG ĐỘNG + NGUYÊN CĂN =================
 function renderRooms() {
     const tabsContainer = document.getElementById('dynamic-room-tabs');
     const roomActions = document.getElementById('room-actions-container');
+    const btnDeleteRoom = document.getElementById('btn-delete-room');
     
     if (!currentUser || !db[currentUser]) {
         tabsContainer.innerHTML = `
             <button class="tab active">Phòng Đơn</button>
             <button class="tab">Phòng Đôi 1</button>
             <button class="tab">Phòng Đôi 2</button>
+            <button class="tab" style="border-color:#2d6a4f; color:#2d6a4f;">🌟 Nguyên Căn</button>
         `;
         if (roomActions) roomActions.style.display = 'none';
         return;
@@ -119,6 +113,7 @@ function renderRooms() {
     if (roomActions) roomActions.style.display = 'flex';
     tabsContainer.innerHTML = '';
     
+    // Các phòng lẻ
     db[currentUser].rooms.forEach(room => {
         const btn = document.createElement('button');
         btn.className = `tab ${room.id === currentRoom ? 'active' : ''}`;
@@ -126,15 +121,29 @@ function renderRooms() {
         btn.onclick = () => switchRoom(room.id);
         tabsContainer.appendChild(btn);
     });
+
+    // Thêm Tab Nguyên Căn đặc biệt
+    const btnNguyenCan = document.createElement('button');
+    btnNguyenCan.className = `tab ${currentRoom === 'nguyen_can' ? 'active' : ''}`;
+    btnNguyenCan.innerHTML = '🌟 Thuê Nguyên Căn';
+    if(currentRoom !== 'nguyen_can') {
+        btnNguyenCan.style.border = '2px solid #2d6a4f';
+        btnNguyenCan.style.color = '#2d6a4f';
+    }
+    btnNguyenCan.onclick = () => switchRoom('nguyen_can');
+    tabsContainer.appendChild(btnNguyenCan);
+
+    // Không cho phép xóa Nguyên Căn
+    if (btnDeleteRoom) {
+        btnDeleteRoom.style.display = currentRoom === 'nguyen_can' ? 'none' : 'inline-block';
+    }
 }
 
 function promptAddRoom() {
     let roomName = prompt("Nhập tên phòng mới (Ví dụ: Phòng VIP, Phòng Đôi 3...):");
     if (!roomName || roomName.trim() === "") return;
-    
     let newRoomId = 'room_' + Date.now(); 
     db[currentUser].rooms.push({ id: newRoomId, name: roomName.trim() });
-    
     currentRoom = newRoomId; 
     saveData();
     renderRooms();
@@ -142,18 +151,15 @@ function promptAddRoom() {
 }
 
 function deleteCurrentRoom() {
-    if (db[currentUser].rooms.length <= 1) {
-        return alert("Phải giữ lại ít nhất 1 phòng trong hệ thống!");
-    }
+    if (currentRoom === 'nguyen_can') return;
+    if (db[currentUser].rooms.length <= 1) return alert("Phải giữ lại ít nhất 1 phòng trong hệ thống!");
     
     let roomObj = db[currentUser].rooms.find(r => r.id === currentRoom);
-    if (!confirm(`CẢNH BÁO: Bạn chắc chắn muốn xóa "${roomObj.name}"?\n\nTất cả lịch khách đặt của phòng này cũng sẽ bị XÓA VĨNH VIỄN!`)) return;
+    if (!confirm(`CẢNH BÁO: Bạn chắc chắn muốn xóa "${roomObj.name}"?\nTất cả lịch của phòng này sẽ bị XÓA VĨNH VIỄN!`)) return;
 
     db[currentUser].rooms = db[currentUser].rooms.filter(r => r.id !== currentRoom);
     db[currentUser].bookings = db[currentUser].bookings.filter(b => b.room !== currentRoom);
-    
     currentRoom = db[currentUser].rooms[0].id;
-    
     saveData();
     renderRooms();
     renderCalendar();
@@ -167,27 +173,53 @@ function switchRoom(roomId) {
     renderCalendar();
 }
 
-// ================= CODE LỊCH =================
-function changeMonth(step) {
-    currentMonth += step;
-    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
-    else if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-    document.getElementById('month-select').value = currentMonth;
-    document.getElementById('year-input').value = currentYear;
-    renderCalendar();
-}
+// ================= LOGIC KIỂM TRA ĐỤNG LỊCH =================
+function getBookingInfoForDate(dateStr) {
+    if(!currentUser || !db[currentUser]) return { status: 'free' };
 
-function getBookingForDate(dateStr) {
-    if(!currentUser || !db[currentUser]) return null;
+    let myRoomBooking = null;
+    let wholeHouseBooking = null;
+    let otherRoomBookings = [];
+
     for(let b of db[currentUser].bookings) {
-        if(b.room === currentRoom && b.dates.includes(dateStr)) return b;
+        if (b.dates.includes(dateStr)) {
+            if (b.room === currentRoom) {
+                myRoomBooking = b;
+            } else if (b.room === 'nguyen_can') {
+                wholeHouseBooking = b;
+            } else {
+                otherRoomBookings.push(b);
+            }
+        }
     }
-    return null;
+
+    if (currentRoom === 'nguyen_can') {
+        if (myRoomBooking) return { status: 'booked', booking: myRoomBooking };
+        if (otherRoomBookings.length > 0) {
+            let bookedRoomNames = otherRoomBookings.map(b => {
+                let r = db[currentUser].rooms.find(x => x.id === b.room);
+                return r ? r.name : 'Phòng khác';
+            });
+            let uniqueNames = [...new Set(bookedRoomNames)];
+            return { status: 'blocked', reason: `🔒 Đang vướng khách ở: ${uniqueNames.join(', ')}` };
+        }
+        return { status: 'free' };
+    } else {
+        if (myRoomBooking) return { status: 'booked', booking: myRoomBooking };
+        if (wholeHouseBooking) return { status: 'blocked', reason: `🔒 Đã khóa do có khách thuê Nguyên Căn (${wholeHouseBooking.guestName})` };
+        return { status: 'free' };
+    }
 }
 
-function handleDayClick(dateStr, booking) {
+function handleDayClick(dateStr, bookingInfo) {
     if(!currentUser) return alert("Vui lòng đăng nhập để thao tác!");
-    if (booking) {
+
+    if (bookingInfo.status === 'blocked') {
+        return alert("⛔ Không thể thao tác!\n\n" + bookingInfo.reason);
+    }
+
+    if (bookingInfo.status === 'booked') {
+        let booking = bookingInfo.booking;
         if(selectedForDelete.includes(booking.id)) {
             selectedForDelete = selectedForDelete.filter(id => id !== booking.id);
         } else {
@@ -211,26 +243,30 @@ function renderCalendar() {
     
     let firstDay = new Date(currentYear, currentMonth, 1).getDay();
     let daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
     for (let i = 0; i < firstDay; i++) grid.innerHTML += `<div></div>`;
 
     let totalRevenue = 0;
     for (let i = 1; i <= daysInMonth; i++) {
         let dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-        let booking = getBookingForDate(dateStr);
+        let bookingInfo = getBookingInfoForDate(dateStr);
+        
         let dayDiv = document.createElement('div');
         dayDiv.className = 'day';
         dayDiv.innerText = i;
 
-        if (booking) {
+        if (bookingInfo.status === 'booked') {
             dayDiv.classList.add('booked');
-            if(selectedForDelete.includes(booking.id)) dayDiv.classList.add('selected-delete');
+            if(selectedForDelete.includes(bookingInfo.booking.id)) dayDiv.classList.add('selected-delete');
+            dayDiv.setAttribute('data-info', `👤 ${bookingInfo.booking.guestName} | 💰 ${bookingInfo.booking.price.toLocaleString()}đ`);
+        } else if (bookingInfo.status === 'blocked') {
+            dayDiv.classList.add('blocked');
+            dayDiv.setAttribute('data-info', bookingInfo.reason);
         } else {
             dayDiv.classList.add('empty');
             if (selectedForBook.includes(dateStr)) dayDiv.classList.add('selected-book');
         }
 
-        dayDiv.onclick = () => handleDayClick(dateStr, booking);
+        dayDiv.onclick = () => handleDayClick(dateStr, bookingInfo);
         grid.appendChild(dayDiv);
     }
 
@@ -238,21 +274,37 @@ function renderCalendar() {
         db[currentUser].bookings.forEach(b => totalRevenue += b.price);
         document.getElementById('nav-revenue').innerText = `Doanh Thu: ${totalRevenue.toLocaleString()} VNĐ`;
         document.getElementById('btn-book-action').style.display = selectedForBook.length > 0 ? 'block' : 'none';
-        document.getElementById('btn-delete-action').style.display = selectedForDelete.length > 0 ? 'block' : 'none';
+        
+        let btnDelete = document.getElementById('btn-delete-action');
+        if (selectedForDelete.length > 0) {
+            btnDelete.style.display = 'block';
+            let names = db[currentUser].bookings.filter(b => selectedForDelete.includes(b.id)).map(b => b.guestName);
+            let uniqueNames = [...new Set(names)];
+            btnDelete.innerText = `- Xóa Lịch Của: ${uniqueNames.join(', ')}`;
+        } else {
+            btnDelete.style.display = 'none';
+        }
     }
     renderSidebar();
+}
+
+function changeMonth(step) {
+    currentMonth += step;
+    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+    else if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+    document.getElementById('month-select').value = currentMonth;
+    document.getElementById('year-input').value = currentYear;
+    renderCalendar();
 }
 
 // ================= TÀI KHOẢN VÀ MENU =================
 function openAuth(mode) {
     authMode = mode;
     document.getElementById('auth-title').innerText = mode === 'login' ? "Đăng Nhập" : "Đăng Ký Mới";
-    
     document.getElementById('auth-business').style.display = mode === 'register' ? 'block' : 'none';
     document.getElementById('auth-business').value = '';
     document.getElementById('auth-user').value = '';
     document.getElementById('auth-pass').value = '';
-    
     document.getElementById('overlay').style.display = 'block';
     document.getElementById('modal-auth').style.display = 'block';
 }
@@ -275,10 +327,7 @@ function submitAuth() {
         if(db[u] && db[u].password === p) {
             currentUser = u;
             localStorage.setItem('homestay_loggedInUser', u);
-            
-            if (db[currentUser].rooms && db[currentUser].rooms.length > 0) {
-                currentRoom = db[currentUser].rooms[0].id;
-            }
+            if (db[currentUser].rooms && db[currentUser].rooms.length > 0) currentRoom = db[currentUser].rooms[0].id;
             
             document.getElementById('nav-register').style.display = 'none';
             document.getElementById('nav-login').style.display = 'none';
@@ -312,7 +361,6 @@ function logout() {
     document.getElementById('nav-admin').style.display = 'none';
     document.getElementById('nav-edit-account').style.display = 'none';
     document.getElementById('admin-controls').style.display = 'none';
-    
     document.getElementById('brand-name').innerText = 'HỆ THỐNG QUẢN LÝ';
     
     currentRoom = 'don1'; 
@@ -322,7 +370,6 @@ function logout() {
     renderCalendar();
 }
 
-// ================= ADMIN QUẢN LÝ =================
 function showAdmin() {
     if (currentUser !== 'admin') return alert("Chỉ Admin mới có quyền truy cập!");
     renderAdminList();
@@ -352,12 +399,9 @@ function editUserPassword(userToEdit) {
     }
 }
 
-// ================= SỬA THÔNG TIN TÀI KHOẢN (MỚI) =================
 function showEditAccount() { 
-    // Tự động điền Tên doanh nghiệp hiện tại vào ô nhập
     document.getElementById('edit-business-name').value = db[currentUser].businessName || '';
-    document.getElementById('edit-password').value = ''; // Để trống ô mật khẩu
-    
+    document.getElementById('edit-password').value = ''; 
     document.getElementById('overlay').style.display = 'block'; 
     document.getElementById('modal-edit-account').style.display = 'block'; 
 }
@@ -365,18 +409,10 @@ function showEditAccount() {
 function submitEditAccount() {
     let newBName = document.getElementById('edit-business-name').value.trim();
     let newPass = document.getElementById('edit-password').value.trim();
-    
     if(!newBName) return alert("Tên doanh nghiệp không được để trống!");
-    
-    // 1. Lưu Tên doanh nghiệp mới
     db[currentUser].businessName = newBName;
-    document.getElementById('brand-name').innerText = newBName.toUpperCase(); // Đổi UI trên góc trái ngay lập tức
-    
-    // 2. Chỉ lưu mật khẩu nếu người dùng có gõ chữ vào
-    if(newPass) {
-        db[currentUser].password = newPass;
-    }
-    
+    document.getElementById('brand-name').innerText = newBName.toUpperCase(); 
+    if(newPass) db[currentUser].password = newPass;
     saveData();
     alert("Cập nhật thông tin thành công!");
     closeModals();
@@ -429,7 +465,6 @@ function closeModals() {
 function renderSidebar() {
     const sidebar = document.getElementById('sidebar-container');
     const listContainer = document.getElementById('booking-list-sidebar');
-    
     if (!sidebar || !listContainer) return;
     if (!currentUser) { sidebar.style.display = 'none'; return; }
     
@@ -451,3 +486,17 @@ function renderSidebar() {
     }
     listContainer.innerHTML = html;
 }
+
+// ==========================================
+// TẠO HÀO QUANG ÁNH SÁNG CHẠY THEO CHUỘT
+// ==========================================
+const glow = document.createElement('div');
+glow.className = 'cursor-glow';
+document.body.appendChild(glow);
+
+document.addEventListener('mousemove', (e) => {
+    requestAnimationFrame(() => {
+        glow.style.left = e.clientX + 'px';
+        glow.style.top = e.clientY + 'px';
+    });
+});
