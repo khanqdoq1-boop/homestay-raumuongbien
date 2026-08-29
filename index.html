@@ -3,10 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Quản Lý Homestay</title>
+    <title>Quản Lý - Homestay Rau Muống Biển</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- KHUNG TẠO CHIỀU SÂU 3D ĐẰNG SAU -->
+    <div class="ambient-bg">
+        <div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div>
+    </div>
+
+    <!-- KHUNG THÔNG BÁO TING TING -->
+    <div id="toast-container">
+        <div class="toast-icon">🔔</div>
+        <div class="toast-content">
+            <h4>CÓ ĐƠN ĐẶT PHÒNG MỚI!</h4>
+            <p id="toast-message">Khách hàng vừa đặt phòng.</p>
+        </div>
+    </div>
+
     <div class="top-bar">
         <div class="nav-left" id="brand-name">HỆ THỐNG QUẢN LÝ</div>
         <div class="nav-right">
@@ -20,18 +34,19 @@
     </div>
 
     <div class="layout-wrapper">
+        <!-- CỘT TRÁI: LỊCH SỬ ĐÃ CHỐT -->
         <div class="sidebar" id="sidebar-container" style="display: none;">
-            <h3>Lịch Đã Đặt</h3>
+            <h3 style="margin-top: 10px;">Lịch Đã Chốt</h3>
             <div id="booking-list-sidebar"></div>
         </div>
 
+        <!-- CỘT GIỮA: QUẢN LÝ LỊCH VÀ PHÒNG -->
         <div class="main-container">
             <div class="room-management">
-                
                 <div id="branch-container" style="display:none; margin-bottom: 20px; gap: 15px; align-items: center; background: rgba(255,255,255,0.6); padding: 10px 25px; border-radius: 30px; border: 1px solid rgba(45,106,79,0.2);">
-                    <b style="color: #2d6a4f; font-size: 15px;">Đang chọn:</b>
-                    <select id="branch-select" onchange="switchBranch(this.value)" style="padding: 8px 15px; border-radius: 8px; font-weight: bold; outline: none; border: 1px solid rgba(45,106,79,0.4); background: #fff; color: #2d6a4f; font-size: 14px; cursor: pointer;"></select>
-                    <button class="btn-black btn-small" style="padding: 8px 15px; border-radius: 20px;" onclick="promptAddBranch()">+ Thêm Cơ Sở</button>
+                    <b style="color: #2d6a4f; font-size: 15px;">Đang chọn Cơ Sở:</b>
+                    <select id="branch-select" onchange="switchBranch(this.value)"></select>
+                    <button class="btn-black btn-small" onclick="promptAddBranch()">+ Thêm Cơ Sở</button>
                 </div>
 
                 <div class="room-tabs" id="dynamic-room-tabs"></div>
@@ -47,12 +62,9 @@
                     <button class="btn-nav" onclick="changeMonth(-1)">&#10094; Trước</button>
                     <div class="month-year-picker">
                         <select id="month-select" onchange="renderCalendar()">
-                            <option value="0">Tháng 1</option><option value="1">Tháng 2</option>
-                            <option value="2">Tháng 3</option><option value="3">Tháng 4</option>
-                            <option value="4">Tháng 5</option><option value="5">Tháng 6</option>
-                            <option value="6">Tháng 7</option><option value="7" selected>Tháng 8</option>
-                            <option value="8">Tháng 9</option><option value="9">Tháng 10</option>
-                            <option value="10">Tháng 11</option><option value="11">Tháng 12</option>
+                            <option value="0">Tháng 1</option><option value="1">Tháng 2</option><option value="2">Tháng 3</option><option value="3">Tháng 4</option>
+                            <option value="4">Tháng 5</option><option value="5">Tháng 6</option><option value="6">Tháng 7</option><option value="7" selected>Tháng 8</option>
+                            <option value="8">Tháng 9</option><option value="9">Tháng 10</option><option value="10">Tháng 11</option><option value="11">Tháng 12</option>
                         </select>
                         <input type="number" id="year-input" value="2026" onchange="renderCalendar()">
                     </div>
@@ -68,22 +80,28 @@
                 <div class="legend">
                     <div class="legend-item"><span class="box box-empty"></span> Trống</div>
                     <div class="legend-item"><span class="box box-selected-book"></span> Đang chọn</div>
-                    <div class="legend-item"><span class="box box-booked"></span> Đã đặt</div>
-                    <div class="legend-item"><span class="box box-blocked"></span> Vướng lịch</div>
+                    <div class="legend-item"><span class="box box-pending"></span> Đang chờ duyệt</div>
+                    <div class="legend-item"><span class="box box-booked"></span> Đã chốt</div>
                 </div>
             </div>
 
             <div id="admin-controls" class="admin-panel" style="display: none;">
-                <p style="text-align: left; font-size: 14px;">
-                    <b>Thao tác nhanh:</b><br>
-                    - <b>Chuyển Cơ Sở:</b> Dùng menu thả xuống ở trên cùng.<br>
-                    - <b>Sửa Tên Cơ Sở:</b> Bấm vào nút "Tài Khoản" trên thanh menu.<br>
-                    - <b>Nguyên Căn:</b> Khóa chéo tự động cho từng cơ sở riêng biệt.<br>
-                </p>
+                <p style="text-align: left; font-size: 14px; color: #333;"><b>Thao tác nhanh:</b> Nhấp vào ngày để đặt lịch thủ công hoặc xóa lịch đã có.</p>
                 <div class="action-buttons">
                     <button id="btn-book-action" class="btn-black btn-action" style="display: none;" onclick="openBookModal()">Lưu Lịch Đặt Phòng</button>
                     <button id="btn-delete-action" class="btn-danger btn-action" style="display: none;" onclick="deleteSelected()">Xóa Lịch Đã Chọn</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- CỘT PHẢI: KHUNG XÉT DUYỆT ĐƠN (CÂN ĐỐI BỐ CỤC 3 CỘT) -->
+        <div id="pending-approvals-panel" style="display: none;">
+            <h3 style="color: #b45309; margin-top: 0; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 18px; font-weight: 800; border-bottom: 2px dashed #fef08a; padding-bottom: 15px; text-transform: uppercase;">
+                <span style="font-size: 24px; animation: ring 1s infinite alternate;">⏳</span> 
+                Chờ Duyệt Tiền Cọc
+            </h3>
+            <div id="pending-list-content" style="display: flex; flex-direction: column; gap: 15px;">
+                <!-- Đơn chờ duyệt chèn vào đây -->
             </div>
         </div>
     </div>
@@ -95,58 +113,48 @@
         <h3 id="prompt-title">Nhập Thông Tin</h3>
         <label id="prompt-label">Nội dung:</label>
         <input type="text" id="prompt-input" placeholder="Nhập vào đây...">
-        <div style="display: flex; gap: 10px; margin-top: 15px;">
-            <button class="btn-cancel" style="flex: 1;" onclick="closeModals()">Hủy</button>
+        <div style="display: flex; gap: 10px; margin-top: 25px;">
+            <button class="btn-cancel" style="flex: 1;" onclick="closeModals()">Hủy Bỏ</button>
             <button class="btn-black" style="flex: 1;" id="prompt-confirm-btn">Xác Nhận</button>
         </div>
     </div>
 
     <div id="modal-custom-confirm" class="modal">
-        <h3 id="confirm-title" style="color: #e63946;">Xác Nhận</h3>
-        <p id="confirm-message" style="font-size: 14px; margin-bottom: 20px; line-height: 1.5; color: #555;"></p>
+        <h3 id="confirm-title" style="color: #ef4444;">Xác Nhận</h3>
+        <p id="confirm-message" style="font-size: 15px; margin-bottom: 25px; line-height: 1.6; color: #333;"></p>
         <div style="display: flex; gap: 10px;">
-            <button class="btn-cancel" style="flex: 1;" onclick="closeModals()">Hủy</button>
+            <button class="btn-cancel" style="flex: 1;" onclick="closeModals()">Hủy Bỏ</button>
             <button class="btn-danger" style="flex: 1;" id="confirm-agree-btn">Đồng Ý</button>
         </div>
     </div>
 
     <div id="modal-auth" class="modal">
         <h3 id="auth-title">Đăng nhập</h3>
-        <input type="text" id="auth-business" placeholder="Tên Doanh Nghiệp (VD: Khách sạn ABC)" style="display: none;">
-        <input type="text" id="auth-user" placeholder="Tên đăng nhập">
+        <input type="text" id="auth-business" placeholder="Tên Doanh Nghiệp" style="display: none;">
+        <input type="text" id="auth-user" placeholder="Tên đăng nhập (VD: Diep)">
         <input type="password" id="auth-pass" placeholder="Mật khẩu">
         <button class="btn-black" onclick="submitAuth()">Xác nhận</button>
     </div>
 
-    <!-- CẬP NHẬT: HỘP THOẠI TÀI KHOẢN CÓ THÊM PHẦN SỬA CƠ SỞ -->
     <div id="modal-edit-account" class="modal">
         <h3>Thiết Lập Thông Tin</h3>
-        
-        <label>Tên Doanh Nghiệp (Góc trái trên cùng):</label>
-        <input type="text" id="edit-business-name" placeholder="Ví dụ: Homestay Rau Muống Biển">
-        
-        <label>Tên Cơ Sở đang chọn (Nhà nghỉ hiện tại):</label>
-        <input type="text" id="edit-branch-name" placeholder="Ví dụ: Cơ sở 1">
-
-        <label>Mật khẩu mới (Bỏ trống nếu không đổi):</label>
-        <input type="password" id="edit-password" placeholder="Nhập mật khẩu mới...">
-        
+        <label>Tên Doanh Nghiệp:</label> <input type="text" id="edit-business-name">
+        <label>Tên Cơ Sở đang chọn:</label> <input type="text" id="edit-branch-name">
+        <label>Mật khẩu mới:</label> <input type="password" id="edit-password" placeholder="Bỏ trống nếu không đổi">
         <button class="btn-black" onclick="submitEditAccount()">Lưu Thay Đổi</button>
     </div>
 
     <div id="modal-admin" class="modal">
         <h3>Danh sách Tài Khoản</h3>
-        <div id="account-list" style="text-align: left; max-height: 200px; overflow-y: auto;"></div>
+        <div id="account-list" style="text-align: left; max-height: 250px; overflow-y: auto;"></div>
     </div>
 
     <div id="modal-book" class="modal">
-        <h3>Thông Tin Đặt Phòng</h3>
-        <p style="text-align:left; font-size: 14px;">Các ngày đã chọn (Năm-Tháng-Ngày): <br><b id="book-dates-lbl" style="color: #555;"></b></p>
-        <label>Tên khách hàng:</label>
-        <input type="text" id="book-name" placeholder="Ví dụ: Nguyễn Văn A">
-        <label>Tổng giá tiền (VNĐ):</label>
-        <input type="number" id="book-price" placeholder="Ví dụ: 500000">
-        <button class="btn-black" onclick="submitBooking()" style="margin-top: 15px;">Xác Nhận Đặt</button>
+        <h3>Tạo Lịch Thủ Công</h3>
+        <p style="text-align:left; font-size: 14px;">Ngày chọn: <br><b id="book-dates-lbl" style="color: #059669;"></b></p>
+        <label>Tên khách hàng:</label> <input type="text" id="book-name" placeholder="Ví dụ: Nguyễn Văn A">
+        <label>Tổng giá tiền (VNĐ):</label> <input type="number" id="book-price" placeholder="Ví dụ: 500000">
+        <button class="btn-black" onclick="submitBooking()" style="margin-top: 25px;">Xác Nhận Đặt</button>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
